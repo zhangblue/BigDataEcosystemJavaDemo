@@ -2,6 +2,10 @@ package cn.com.kafka.demo;
 
 import cn.com.kafka.connection.KafkaConnect;
 import cn.com.kafka.connection.KafkaOffsetResetEnum;
+import com.google.common.io.Files;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -9,11 +13,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 public class Examples {
-
-  public static void main(String[] args) {
-    new Examples().consumerDemo();
-  }
-
 
   /***
    * 消费者Demo
@@ -26,6 +25,8 @@ public class Examples {
 
     KafkaConsumer consumer = new KafkaConsumer(properties);
     consumer.subscribe(Arrays.asList("topic_threat"));
+
+    File file = new File("/Users/zhangdi/test_folder/data_test/message");
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(1000);
       System.out.println("poll count =" + records.count());
@@ -33,8 +34,11 @@ public class Examples {
       for (ConsumerRecord<String, String> record : records) {
         String kafkaKey = record.key();
         String kafkaValue = record.value();
-        System.out.println("key=" + kafkaKey);
-        System.out.println("value=" + kafkaValue);
+        try {
+          Files.append(kafkaKey + "=====" + kafkaValue + "\n", file, Charset.defaultCharset());
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       }
     }
   }
