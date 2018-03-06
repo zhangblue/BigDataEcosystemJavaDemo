@@ -30,7 +30,6 @@ public class KafkaConnect {
         "org.apache.kafka.common.serialization.StringDeserializer");
     propsConsumer.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
         kafkaOffsetResetEnum.getAction());//latest, earliest, none
-
     return propsConsumer;
   }
 

@@ -11,6 +11,7 @@
   <modules>
     <module>HDFSDemo</module>
     <module>KafkaDemo</module>
+    <module>ElasticSearchDemo</module>
   </modules>
 
   <!-- 设置CDH maven地址-->
@@ -47,6 +48,7 @@
       <version>4.12</version>
       <scope>test</scope>
     </dependency>
+
     <!--alibaba fastjson-->
     <dependency>
       <groupId>com.alibaba</groupId>
