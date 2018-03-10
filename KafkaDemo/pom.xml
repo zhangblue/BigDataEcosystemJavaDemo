@@ -29,6 +29,13 @@
       <artifactId>kafka-tools</artifactId>
       <version>0.9.0.0</version>
     </dependency>
+
+    <!-- google guava -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>17.0</version>
+    </dependency>
   </dependencies>
 
 

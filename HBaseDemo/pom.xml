@@ -9,24 +9,23 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>ElasticSearchDemo</artifactId>
+  <artifactId>HBaseDemo</artifactId>
 
   <dependencies>
-    <!-- ElasticSearch -->
+    <!--hbase-->
     <dependency>
-      <groupId>org.elasticsearch.client</groupId>
-      <artifactId>transport</artifactId>
-      <version>6.0.0</version>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <version>1.0.2</version>
+
     </dependency>
-
-
-    <!-- google guava -->
+    <!--apache commons-codec-->
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>17.0</version>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.10</version>
     </dependency>
-
   </dependencies>
+
 
 </project>

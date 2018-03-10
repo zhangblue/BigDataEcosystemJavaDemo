@@ -12,6 +12,7 @@
     <module>HDFSDemo</module>
     <module>KafkaDemo</module>
     <module>ElasticSearchDemo</module>
+    <module>HBaseDemo</module>
   </modules>
 
   <!-- 设置CDH maven地址-->
@@ -56,12 +57,6 @@
       <version>1.2.45</version>
     </dependency>
 
-    <!-- google guava -->
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>19.0</version>
-    </dependency>
 
 
   </dependencies>
