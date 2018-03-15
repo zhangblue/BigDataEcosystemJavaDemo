@@ -84,27 +84,23 @@ public class ExampleDemo {
   /***
    * 创建有数据生命周期的hbase表
    * @param tableName 表名
-   * @param familys lie族名
-   * @param time 存活时间
+   * @param family 列族名
+   * @param time 存活时间(秒)
    * @throws Exception
    */
-  public boolean createHbaseTable(String tableName, String familys,
-      int time) {
+  public boolean createHbaseTable(String tableName, String family, int time) {
     boolean flage = false;
     try {
       Admin admin = hBaseResources.getConnection().getAdmin();
       if (admin.tableExists(TableName.valueOf(tableName))) {
         flage = false;
       } else {
-        String[] family = familys.split(";");
         HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-        for (int i = 0; i < family.length; i++) {
-          HColumnDescriptor hColumnDescriptor = new HColumnDescriptor(family[i]);
-          if (time > 0) {
-            hColumnDescriptor.setTimeToLive(time);
-          }
-          desc.addFamily(hColumnDescriptor);
+        HColumnDescriptor hColumnDescriptor = new HColumnDescriptor(family);
+        if (time > 0) {
+          hColumnDescriptor.setTimeToLive(time);
         }
+        desc.addFamily(hColumnDescriptor);
         admin.createTable(desc);
         flage = true;
       }

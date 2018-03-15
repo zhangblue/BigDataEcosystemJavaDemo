@@ -33,11 +33,6 @@ public class TestDemo {
   }
 
   @Test
-  public void testGetByRowKey() {
-    new ExampleDemo(hBaseResources).getByRowKey("bangcle_config_sync", "info", "cheat_host_rule");
-  }
-
-  @Test
   public void testCreateHbaseTable() {
     new ExampleDemo(hBaseResources)
         .createHbaseTable("bangcle_safe_event_threat_list", "threat_list", 3600);

@@ -5,9 +5,15 @@ import com.alibaba.fastjson.JSONObject;
 import org.elasticsearch.action.get.GetRequestBuilder;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
+import org.elasticsearch.client.AdminClient;
+import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermsQueryBuilder;
 
 public class ExampleDemo {
 
@@ -18,7 +24,7 @@ public class ExampleDemo {
   }
 
   /**
-   * 测试通过id查询数据
+   * 测试通过_id查询数据
    */
   public void getSourceById(String index, String type, String id) {
     TransportClient client = elasticSearchRepository.getTransportClient();
@@ -32,6 +38,19 @@ public class ExampleDemo {
     } else {
       System.out.println("not exist");
     }
+  }
+
+  public void getQuery(String[] indexs, String keyName1, String keyValue1, String keyName2, String keyValue2) {
+    BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+    TermsQueryBuilder queryBuilder1 = QueryBuilders
+        .termsQuery(keyName1, keyValue1);
+    TermsQueryBuilder queryBuilder2 = QueryBuilders
+        .termsQuery(keyName2, keyValue2);
+    boolQueryBuilder.must(queryBuilder1);
+    boolQueryBuilder.must(queryBuilder2);
+
+    SearchRequestBuilder searchRequestBuilder = elasticSearchRepository.getTransportClient().prepareSearch(indexs).setTypes("").setQuery(boolQueryBuilder).setSize(100);
+
   }
 
   /**
@@ -58,5 +77,9 @@ public class ExampleDemo {
         .update(updateRequest).actionGet();
   }
 
+  public void renameIndex(String oldName, String newName) {
+   AdminClient admin =  elasticSearchRepository.getTransportClient().admin();
 
+   IndicesAdminClient indicesAdminClient = admin.indices();
+  }
 }

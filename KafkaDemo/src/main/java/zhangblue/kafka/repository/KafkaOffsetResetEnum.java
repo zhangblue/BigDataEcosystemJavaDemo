@@ -1,4 +1,4 @@
-package cn.com.kafka.connection;
+package zhangblue.kafka.repository;
 
 public enum KafkaOffsetResetEnum {
 
