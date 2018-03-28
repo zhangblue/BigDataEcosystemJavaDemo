@@ -1,12 +1,25 @@
 package zhangblue.redis.repository;
 
+import com.google.common.base.Strings;
+import java.io.IOException;
+import java.util.Properties;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 public class RedisResources {
 
+  private Properties properties;
   protected JedisPool jedispool;
+
+
+  /**
+   * 读取配置文件
+   */
+  public void initJedisProperties() throws IOException {
+    properties = new Properties();
+    properties.load(this.getClass().getResourceAsStream("/config.properties"));
+  }
 
   /**
    * 初始化redis链接池
@@ -28,7 +41,13 @@ public class RedisResources {
       config.setMaxWaitMillis(1000 * 100);
       // 在borrow一个jedis实例时，是否提前进行validate操作；如果为true，则得到的jedis实例均是可用的；
       config.setTestOnBorrow(true);
-      jedispool = new JedisPool(config, "172.16.12.42", 6379, 3000);
+
+      if (Strings.isNullOrEmpty(properties.getProperty("redis.password"))) {
+        jedispool = new JedisPool(config, properties.getProperty("redis.server.host"), Integer.parseInt(properties.getProperty("redis.server.port")), 3000);
+      } else {
+        jedispool = new JedisPool(config, properties.getProperty("redis.server.host"), Integer.parseInt(properties.getProperty("redis.server.port")), 3000,
+            properties.getProperty("redis.password"));
+      }
       System.out.println("redis init success");
     } catch (Exception e) {
       e.printStackTrace();

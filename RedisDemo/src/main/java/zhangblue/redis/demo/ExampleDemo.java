@@ -13,15 +13,15 @@ public class ExampleDemo {
 
   /**
    * 向redis放入数据
-   * @param key
-   * @param value
    */
-  public void setKey(String key, String value) {
+  public void setKey(String key, String value, int ttlSeconds) {
     Jedis jedis = redisResources.getJedis();
     jedis.set(key, value);
+    if (ttlSeconds != 0) {
+      jedis.expire(key,ttlSeconds);
+    }
     redisResources.close(jedis);
   }
-
 
 
 }
