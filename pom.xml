@@ -13,6 +13,7 @@
     <module>KafkaDemo</module>
     <module>ElasticSearchDemo</module>
     <module>HBaseDemo</module>
+    <module>RedisDemo</module>
   </modules>
 
   <!-- 设置CDH maven地址-->

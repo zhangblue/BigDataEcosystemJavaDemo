@@ -1,6 +1,5 @@
 package cn.com.zhangblue.repository;
 
-import com.google.common.base.Splitter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -11,7 +10,6 @@ import java.util.Properties;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.bulk.BackoffPolicy;
-import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkProcessor.Listener;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -39,18 +37,22 @@ public class ElasticSearchRepository {
 
   /**
    * 创建 elasticsearch client
+   *
+   * 设置链接集群的名字 cluster.name
+   * 设置嗅探 false
    **/
   public void buildClient() throws UnknownHostException {
     Settings settings = Settings.builder()
         .put("cluster.name", properties.getProperty("elasticsearch.clouster.name"))
-        .put("client.transport.sniff", false).build();
-    Iterable<String> iterableHostName = Splitter.on(",").trimResults()
-        .split(properties.getProperty("elasticsearch.address"));
+        .put("client.transport.sniff", true).build();
+//    Iterable<String> iterableHostName = Splitter.on(",").trimResults()
+//        .split(properties.getProperty("elasticsearch.address"));
+    String[] iterableHostName = {properties.getProperty("elasticsearch.address")};
     transportClient = new PreBuiltTransportClient(settings);
 
     for (String strTransportHostName : iterableHostName) {
       transportClient.addTransportAddress(
-          new TransportAddress(InetAddress.getByName(strTransportHostName), 9300));
+          new TransportAddress(InetAddress.getByName(strTransportHostName), Integer.parseInt(properties.getProperty("elasticsearch.port"))));
     }
   }
 
@@ -60,31 +62,31 @@ public class ElasticSearchRepository {
    */
   public void buildBulkProcessor() {
     bulkProcessor = BulkProcessor.builder(transportClient, new Listener() {
+      //bulk提交前执行
       @Override
       public void beforeBulk(long l, BulkRequest bulkRequest) {
-
+        System.out.println("commit action count = " + bulkRequest.numberOfActions());
       }
 
       @Override
       public void afterBulk(long l, BulkRequest bulkRequest, BulkResponse bulkResponse) {
-        BulkItemResponse[] bulkItemResponses = bulkResponse.getItems();
-        for (BulkItemResponse bulkItemResponse : bulkItemResponses) {
-          if (!bulkItemResponse.isFailed()) {
-            System.out.println("yes==" + System.currentTimeMillis());
-          }
+        if (bulkResponse.hasFailures()) {
+          System.out.println("has fails");
+        } else {
+          System.out.println("no fails");
         }
       }
 
       @Override
       public void afterBulk(long l, BulkRequest bulkRequest, Throwable throwable) {
-
+        System.out.println(bulkRequest.getDescription());
+        System.out.println(throwable.getStackTrace());
       }
     }).setBulkActions(1000).setBulkSize(new ByteSizeValue(5, ByteSizeUnit.MB)).setFlushInterval(
-        TimeValue.timeValueSeconds(5)).setConcurrentRequests(3)
+        TimeValue.timeValueSeconds(10)).setConcurrentRequests(3)
         .setBackoffPolicy(BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
         .build();
   }
-
 
   public void closeClient() {
     if (transportClient != null) {

@@ -44,10 +44,10 @@ public class TestDemo {
 
   @Test
   public void testInsertHbase() {
-    String str = "family=info3,qualifier=info1";
+    String str = "bbb";
     try {
       new ExampleDemo(hBaseResources)
-          .putToHbase("test_zhangd", "info3", "info1", "testone", str);
+          .putToHbase("test_zhangd", "family1", "info2", "testone", str);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -65,7 +65,7 @@ public class TestDemo {
   @Test
   public void testTableAddFamily() {
     try {
-      new ExampleDemo(hBaseResources).tableAddFamily("test_zhangd", "info3");
+      new ExampleDemo(hBaseResources).tableAddFamily("test_zhangd", "family2");
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -83,7 +83,7 @@ public class TestDemo {
   @Test
   public void testCleanFamily() {
     try {
-      new ExampleDemo(hBaseResources).cleanFamily("test_zhangd", "testone", "info3");
+      new ExampleDemo(hBaseResources).cleanFamily("test_zhangd", "testone", "family1");
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -92,7 +92,16 @@ public class TestDemo {
   @Test
   public void testDeleteFamily(){
     try {
-      new ExampleDemo(hBaseResources).deleteFamily("test_zhangd","info3");
+      new ExampleDemo(hBaseResources).deleteFamily("test_zhangd","info2");
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Test
+  public void testColumnList(){
+    try {
+      new ExampleDemo(hBaseResources).columnList("test_zhangd","family1","testone");
     } catch (IOException e) {
       e.printStackTrace();
     }

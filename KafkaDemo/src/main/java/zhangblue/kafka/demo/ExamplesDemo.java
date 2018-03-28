@@ -1,5 +1,7 @@
 package zhangblue.kafka.demo;
 
+import com.alibaba.fastjson.JSONObject;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -20,16 +22,26 @@ public class ExamplesDemo {
   public void consumerDemo(String borkers, String[] topic, String groupId) {
     KafkaRepository kafkaRepository = new KafkaRepository();
     Properties properties = kafkaRepository
-        .getPropsConsumer(groupId, borkers, KafkaOffsetResetEnum.EARLIEST);
+        .getPropsConsumer(groupId, borkers, KafkaOffsetResetEnum.LAST);
     KafkaConsumer consumer = new KafkaConsumer(properties);
     consumer.subscribe(Arrays.asList(topic));
+    File file = new File("/Users/zhangdi/test_folder/data_test/message_crash");
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(1000);
+      System.out.println(records.count());
       for (ConsumerRecord<String, String> record : records) {
         String line =
             "partition=[{" + record.partition() + "}] , topic=[{" + record.topic() + "}] , offset=[{" + record.offset() + "}] , key=[{" + record.key() + "}] , value=[{" + record
                 .value() + "}]";
-        System.out.println(line);
+        JSONObject jsonObject = JSONObject.parseObject(record.key());
+        if (jsonObject.getString("message_type").equals("crash")) {
+          JSONObject jsonValue = JSONObject.parseObject(record.value());
+
+          if (jsonValue.containsKey("data") && jsonValue.get("data") instanceof JSONObject) {
+
+          }
+        }
+        //System.out.println(line);
       }
     }
   }

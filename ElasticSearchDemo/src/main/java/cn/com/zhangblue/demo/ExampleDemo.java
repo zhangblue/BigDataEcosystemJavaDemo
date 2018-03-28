@@ -2,15 +2,23 @@ package cn.com.zhangblue.demo;
 
 import cn.com.zhangblue.repository.ElasticSearchRepository;
 import com.alibaba.fastjson.JSONObject;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequestBuilder;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
-import org.elasticsearch.client.AdminClient;
-import org.elasticsearch.client.IndicesAdminClient;
+import org.elasticsearch.client.ClusterAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.cluster.health.ClusterIndexHealth;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermsQueryBuilder;
@@ -56,10 +64,13 @@ public class ExampleDemo {
   /**
    * 批量入库
    */
-  public void addByBulk(String index, String type, String id, JSONObject jsonObject) {
-    IndexRequest indexRequest = new IndexRequest(index, type,
-        id).source(jsonObject);
-    elasticSearchRepository.getBulkProcessor().add(indexRequest);
+  public void addByBulk(List<JSONObject> jsonSources) {
+
+    for (JSONObject jsonSource : jsonSources) {
+      IndexRequest indexRequest = new IndexRequest(jsonSource.getString("index"), jsonSource.getString("type"),
+          jsonSource.getString("id")).source(jsonSource.getJSONObject("source"));
+      elasticSearchRepository.getBulkProcessor().add(indexRequest);
+    }
     elasticSearchRepository.getBulkProcessor().flush();//flush是立刻提交bulk中的操作。否则需要等待bulk周期自行刷新
   }
 
@@ -75,11 +86,69 @@ public class ExampleDemo {
 
     UpdateResponse updateResponse = elasticSearchRepository.getTransportClient()
         .update(updateRequest).actionGet();
+    String status = updateResponse.getResult().getLowercase();
+    int status_id = updateResponse.status().getStatus();
+
+    if (status.equals("updated") || status_id == 200) {
+      System.out.println("update message success");
+    } else if (status.equals("created") || status_id == 201) {
+      System.out.println("create message success");
+    }
+    System.out.println(updateResponse.getResult().getLowercase() + "=====" + updateResponse.status() + "=====" + updateResponse.status().getStatus());
   }
 
-  public void renameIndex(String oldName, String newName) {
-   AdminClient admin =  elasticSearchRepository.getTransportClient().admin();
-
-   IndicesAdminClient indicesAdminClient = admin.indices();
+  /**
+   * 得到指定index的状态
+   *
+   * @param indices index列表
+   */
+  public void indexStat(String[] indices) {
+    ClusterAdminClient clusterAdminClient = elasticSearchRepository.getTransportClient().admin().cluster();
+    ClusterHealthResponse clusterHealthResponse = clusterAdminClient.health(new ClusterHealthRequest(indices)).actionGet();
+    Map<String, ClusterIndexHealth> indexHealthMap = clusterHealthResponse.getIndices();
+    Iterator<String> itIndices = indexHealthMap.keySet().iterator();
+    while (itIndices.hasNext()) {
+      String key = itIndices.next();
+      ClusterIndexHealth clusterIndexHealth = indexHealthMap.get(key);
+      System.out.println(clusterIndexHealth.getStatus() + "---" + clusterIndexHealth.getIndex() + "---" + clusterIndexHealth
+          .getActivePrimaryShards() + "---" + clusterIndexHealth.getNumberOfReplicas());
+    }
   }
+
+  /**
+   * 删除指定index的数据
+   *
+   * @param index index名
+   * @param type type
+   * @param id id
+   */
+  public void deleteById(String index, String type, String id) {
+    DeleteResponse response = elasticSearchRepository.getTransportClient().prepareDelete(index, type, id).get(TimeValue.timeValueSeconds(1));
+    String result = response.getResult().getLowercase();
+    int status_id = response.status().getStatus();
+
+    if (status_id == 200 || result.equals("deleted")) {
+      System.out.println("delete success");
+    } else if (status_id == 404 || result.equals("not_found")) {
+      System.out.println("not found");
+    } else {
+      System.out.println(result);
+    }
+  }
+
+  /**
+   * 插入单挑数据
+   *
+   * @param index index名
+   * @param type type
+   * @param id id
+   * @param jsonSource 数据体
+   */
+  public void insertSource(String index, String type, String id, JSONObject jsonSource) {
+    IndexResponse indexResponse = elasticSearchRepository.getTransportClient().prepareIndex(index, type, id).setSource(jsonSource).get(TimeValue.timeValueSeconds(1));
+
+    System.out.println(indexResponse.toString());
+  }
+
+
 }

@@ -21,7 +21,7 @@ public class TestKafka {
   @Test
   public void testConsumer() {
     String kafkaBorkers = "172.16.31.66:9092,172.16.31.75:9092,172.16.31.80:9092";
-    String[] topics = {"test_zhangd"};
+    String[] topics = {"bangcle_crash_stack_analysis"};
     String groupId = "group_test_01";
     examplesDemo.consumerDemo(kafkaBorkers, topics, groupId);
   }
@@ -32,7 +32,7 @@ public class TestKafka {
     String topics = "test_zhangd";
     String key = "test_key1";
     System.out.println(Math.floorMod(key.hashCode(),2));
-    examplesDemo.producerDemo(kafkaBorkers, topics, key, "test_value");
+    examplesDemo.producerDemo(kafkaBorkers, topics, key, "test_value4");
   }
 
   @Test

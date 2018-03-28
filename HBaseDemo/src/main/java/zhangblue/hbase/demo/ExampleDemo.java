@@ -3,6 +3,7 @@ package zhangblue.hbase.demo;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -202,5 +203,26 @@ public class ExampleDemo {
   public void deleteFamily(String tableName, String familyName) throws IOException {
     Admin admin = hBaseResources.getConnection().getAdmin();
     admin.deleteColumn(TableName.valueOf(tableName), Bytes.toBytes(familyName));
+  }
+
+  /**
+   * 获取指定rowkey，指定family的所有列
+   *
+   * @param tableName 表名
+   * @param familyName 列族
+   * @param rowKye rowkey
+   */
+  public void columnList(String tableName, String familyName, String rowKye) throws IOException {
+    Table table = hBaseResources.getConnection().getTable(TableName.valueOf(tableName));
+    Get get = new Get(Bytes.toBytes(rowKye));
+    get.addFamily(Bytes.toBytes(familyName));
+    Result result = table.get(get);
+    if (result.rawCells().length > 0) {
+      List<Cell> listCell = result.listCells();
+      for (Cell cell : listCell) {
+        String cellName = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+        System.out.println("qualifier = " + cellName);
+      }
+    }
   }
 }
