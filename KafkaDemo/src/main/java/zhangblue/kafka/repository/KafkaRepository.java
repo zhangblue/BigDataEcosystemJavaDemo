@@ -25,7 +25,7 @@ public class KafkaRepository {
         .put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBrokderAddrs);
     propsConsumer.put(ConsumerConfig.GROUP_ID_CONFIG, strGroupId);
     propsConsumer.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-    propsConsumer.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+    propsConsumer.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "10000");
     propsConsumer.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
     propsConsumer.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
     propsConsumer.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);

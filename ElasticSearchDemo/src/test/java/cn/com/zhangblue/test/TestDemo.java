@@ -10,7 +10,12 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import org.elasticsearch.action.get.GetRequestBuilder;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.common.unit.TimeValue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,7 +84,7 @@ public class TestDemo {
         .fluentPut("dt_server_time", System.currentTimeMillis());
     JSONObject jsonObjectUpdate = new JSONObject().fluentPut("action", "update1")
         .fluentPut("dt_server_time", System.currentTimeMillis());
-    new ExampleDemo(elasticSearchRepository).addByUpsert("index_zhangd_test", "zhangblue_type",
+    new ExampleDemo(elasticSearchRepository).addByUpsert("bangcle_zhangd", "zhangblue_type",
         "zhangblue", jsonObjectIndex, jsonObjectUpdate);
   }
 
@@ -103,25 +108,32 @@ public class TestDemo {
   @Test
   public void testInsertSource() {
 
-    String line = "{\"ip_lan\":\"172.16.19.138\",\"agent_id\":1,\"start_id\":1522202199,\"user_data\":[{\"ccb_data\":[{\"phone\":\"13412120990\",\"id_card\":\"999220198909091212\",\"id\":1,\"bank_subbranch\":\"中国建设银行北七家支行\"}]}],\"version\":\"everisk 1.0 beta\",\"platform\":\"android\",\"protol_type\":\"userdata\",\"extra\":{\"location\":{\"latitude\":\"39.8822627832\",\"longitude\":\"116.5494035971\"}},\"self_md5\":\"1000000000000000000000000000000005\",\"protol_version\":4,\"time\":1522202199642,\"udid\":\"4070-00000000-0000-0000-0000-000000004070\",\"msg_id\":1397,\"run_key\":\"93dd83e8fc510672f1d2931bca2cde4d\",\"server_time\":1522202199598,\"client_ip\":\"172.16.12.13\",\"redis_ip\":\"\",\"model\":\"Redmi 4A5\",\"os_version\":\"6.0.15\",\"manufacturer\":\"Xiaomi5\",\"imei\":[864701034210003],\"app_name\":\"测试应用\",\"app_version\":\"5.0.0\",\"net_type\":\"NETWORK_WIFI\",\"location\":null,\"os_info\":\"android 6.0.15\",\"app_info\":\"android 5.0.0\",\"data_type\":\"userdata\"}";
+    String line = "{\"agent_id\":372,\"start_id\":1522652728478,\"msg_id\":1,\"udid\":\"7c207892-1019-4aa2-991f-c43e1fc4047d\",\"self_md5\":\"9hzktrg6bkmst9pchot6ffb2e6o=\",\"version\":\"everisk iOS4.0.0-0111\",\"protol_version\":1,\"protol_type\":\"devinfo\",\"time\":1522652728529,\"platform\":\"ios\",\"extra\":null,\"server_time\":1522652728614,\"client_ip\":\"172.16.18.22\",\"location\":\"\",\"run_key\":\"883f822b478aa313845e280f12fff0e8\",\"ip_lan\":\"172.16.18.22\",\"ip_wan\":null,\"host\":\"iPhone7(is_new)\",\"model\":\"iPhone 7\",\"is_root\":null,\"os_name\":\"iOS\",\"os_version\":\"10.2.1\",\"resolution_w\":\"750\",\"resolution_h\":\"1334\",\"networking_mode\":\"WIFI\",\"carrier\":\"中国联通\",\"mcc\":null,\"mnc\":null,\"iso\":null,\"allows_voip\":true,\"battery_level\":\"1.00\",\"proximity_state\":false,\"multitasking_supported\":true,\"cpu_abi\":\"arm64\",\"manufacturer\":\"Apple\",\"app_name\":\"EveriskTest\",\"app_version\":\"1.0\",\"net_type\":\"\",\"os_info\":\"ios 10.2.1\",\"app_info\":\"ios 1.0\",\"data_type\":\"devinfo\"}";
 
     JSONObject jsonSource = JSONObject.parseObject(line);
 
-    //得到index
-    long lServerTime = Long.parseLong(jsonSource.getString("server_time"));
-    String strDate = getStringByLong(lServerTime / 1000L, "yyyyMMdd");
-    String strIndex = "bangcle_user_data_" + strDate;
-    //得到id runkey|agent_id
-    String id = jsonSource.getString("run_key") + "|" + jsonSource.getString("agent_id");
+    String udid = jsonSource.getString("udid");
 
-    //整理数据
+    String agent_id = jsonSource.getString("agent_id");
     fixDate(jsonSource, "time");
-    fixDate(jsonSource, "server_time");
-
+    fixDate(jsonSource, "server_time"); //处理json数据
+    //必须存在的字段
+    //可有可无的
     fixObj(jsonSource, "extra");
-    fixObj(jsonSource, "user_data");
 
-    new ExampleDemo(elasticSearchRepository).insertSource(strIndex, "bangcle_type", id, jsonSource);
+    //dev获取id的方式和其它逻辑不一样, by zhaogj
+    String strId = udid + "|" + agent_id;
+
+    boolean f = checkDevinfoChange(strId, jsonSource);
+    System.out.println(strId);
+    System.out.println(f);
+
+
+    if (f) {
+      new ExampleDemo(elasticSearchRepository).insertSource("bangcle_devinfo", "bangcle_type", strId, jsonSource);
+    } else {
+      System.out.println("1111111");
+    }
   }
 
   /**
@@ -165,5 +177,77 @@ public class TestDemo {
     LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.of("+08:00"));
     DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(strFormatter);
     return localDateTime.format(dateTimeFormatter);
+  }
+
+  /***
+   * 判断发来的消息除server_time以外其他字段在es中是否都没有改变过，如果没有改变，则不需要进行upsert操作
+   * @param jsonObject
+   * @return 返回是否需要更新设备信息, true为需要添加，false为不需要添加
+   */
+  private boolean checkDevinfoChange(String strid, JSONObject jsonObject) {
+    boolean bflage = false;
+    try {
+      GetRequestBuilder getRequest = elasticSearchRepository.getTransportClient()
+          .prepareGet("bangcle_devinfo", "bangcle_type", strid);
+
+      GetResponse getResponse = getRequest.get(TimeValue.timeValueSeconds(2));
+
+      if (getResponse.isExists()) {
+        Map<String, Object> kafkaMap = JSONObject.parseObject(jsonObject.toJSONString(), Map.class);
+        //删除变化的字段
+        if (kafkaMap.containsKey("start_id")) {
+          kafkaMap.remove("start_id");
+        }
+        if (kafkaMap.containsKey("msg_id")) {
+          kafkaMap.remove("msg_id");
+        }
+        if (kafkaMap.containsKey("time")) {
+          kafkaMap.remove("time");
+        }
+        if (kafkaMap.containsKey("dt_time")) {
+          kafkaMap.remove("dt_time");
+        }
+        if (kafkaMap.containsKey("server_time")) {
+          kafkaMap.remove("server_time");
+        }
+        if (kafkaMap.containsKey("dt_server_time")) {
+          kafkaMap.remove("dt_server_time");
+        }
+        if (kafkaMap.containsKey("run_key")) {
+          kafkaMap.remove("run_key");
+        }
+
+        Map<String, Object> mapEs = getResponse.getSourceAsMap();
+        Iterator<String> iteratorKey = kafkaMap.keySet().iterator();
+        while (iteratorKey.hasNext()) {
+          String messageKey = iteratorKey.next();
+
+          if (mapEs.containsKey(messageKey)) {
+            if (kafkaMap.get(messageKey) == null) {
+              //如果kafka数据是null，直接跳过
+              continue;
+            } else if (mapEs.get(messageKey) == null) {
+              //如果kafka数据不是null，但是es里是空的，则需要进行更新
+              bflage = true;
+              break;
+            } else if (mapEs.get(messageKey).toString()
+                .equals(kafkaMap.get(messageKey).toString())) {
+            } else {
+              bflage = true;
+              break;
+            }
+          } else {
+            bflage = true;
+            break;
+          }
+        }
+      } else {
+        bflage = true;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      bflage = true;
+    }
+    return bflage;
   }
 }

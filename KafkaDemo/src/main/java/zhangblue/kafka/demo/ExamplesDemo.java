@@ -1,7 +1,11 @@
 package zhangblue.kafka.demo;
 
 import com.alibaba.fastjson.JSONObject;
+import com.google.common.base.Strings;
+import com.google.common.io.Files;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -15,34 +19,55 @@ import zhangblue.kafka.repository.KafkaRepository;
 
 public class ExamplesDemo {
 
-
   /***
    * 消费者Demo
    */
   public void consumerDemo(String borkers, String[] topic, String groupId) {
     KafkaRepository kafkaRepository = new KafkaRepository();
     Properties properties = kafkaRepository
-        .getPropsConsumer(groupId, borkers, KafkaOffsetResetEnum.LAST);
+        .getPropsConsumer(groupId, borkers, KafkaOffsetResetEnum.EARLIEST);
     KafkaConsumer consumer = new KafkaConsumer(properties);
     consumer.subscribe(Arrays.asList(topic));
-    File file = new File("/Users/zhangdi/test_folder/data_test/message_crash");
+
+    File file = new File("/Users/zhangdi/test_folder/data_test/data_kafka_zhangdi_test6");
+    File file2 = new File("/Users/zhangdi/test_folder/data_test/data_kafka_zhangdi_test6_all");
+    File file3 = new File("/Users/zhangdi/test_folder/data_test/data_kafka_zhangdi_error");
+
+    file3.delete();
+    int count = 0;
+
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(1000);
-      System.out.println(records.count());
+      System.out.println("records = " + records.count());
       for (ConsumerRecord<String, String> record : records) {
-        String line =
-            "partition=[{" + record.partition() + "}] , topic=[{" + record.topic() + "}] , offset=[{" + record.offset() + "}] , key=[{" + record.key() + "}] , value=[{" + record
-                .value() + "}]";
-        JSONObject jsonObject = JSONObject.parseObject(record.key());
-        if (jsonObject.getString("message_type").equals("crash")) {
-          JSONObject jsonValue = JSONObject.parseObject(record.value());
-
-          if (jsonValue.containsKey("data") && jsonValue.get("data") instanceof JSONObject) {
-
+        String line = record.value();
+        JSONObject jsonObject = JSONObject.parseObject(line);
+        long servertime = jsonObject.getLongValue("server_time");
+        JSONObject jsonBody = jsonObject.getJSONObject("body");
+        if (!Strings.isNullOrEmpty(jsonBody.getString("protol_type"))) {
+          if (jsonBody.getString("protol_type").equals("userdata")) {
+            count++;
+            try {
+              Files
+                  .append(jsonBody.getString("protol_type") + "\t" + jsonBody.getString("udid") + "\t" + servertime + "\t" + record.partition() + "\t" + record.offset() + "\n",
+                      file,
+                      Charset.defaultCharset());
+              Files
+                  .append(record.value() + "\n", file2, Charset.defaultCharset());
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          }
+        } else {
+          try {
+            Files
+                .append(record.value() + "\n", file3, Charset.defaultCharset());
+          } catch (IOException e) {
+            e.printStackTrace();
           }
         }
-        //System.out.println(line);
       }
+      System.out.println("now = " + count);
     }
   }
 
@@ -77,5 +102,37 @@ public class ExamplesDemo {
     ProducerRecord<String, String> record = new ProducerRecord<>(topic, paration, key, value);
     kafkaProducer.send(record, new KafkaCallback(key, value));
     kafkaProducer.flush();
+  }
+
+  /***
+   * 消费者Demo
+   */
+  public void consumerToProducer(String consumerBorkers, String[] consumerTopic, String groupId, String producerTopic, String producerBorkers) {
+    KafkaRepository kafkaRepository = new KafkaRepository();
+    Properties propertiesConsumer = kafkaRepository
+        .getPropsConsumer(groupId, consumerBorkers, KafkaOffsetResetEnum.LAST);
+
+    Properties propertiesproducer = kafkaRepository.getPropsProducer(producerBorkers);
+
+    KafkaConsumer consumer = new KafkaConsumer(propertiesConsumer);
+    KafkaProducer<String, String> kafkaProducer = new KafkaProducer<String, String>(propertiesproducer);
+
+    consumer.subscribe(Arrays.asList(consumerTopic));
+
+    File file = new File("/Users/zhangdi/test_folder/data_test/data_kafka_zhangdi_001");
+
+    while (true) {
+      ConsumerRecords<String, String> records = consumer.poll(1000);
+      System.out.println("consumer count = " + records.count());
+      for (ConsumerRecord<String, String> record : records) {
+        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(producerTopic, record.key(), record.value());
+        kafkaProducer.send(producerRecord, new KafkaCallback(record.key(), record.value()));
+//        try {
+//          Files.append(record.value() + "\t" + record.partition() + "\t" + record.offset() + "\n", file, Charset.defaultCharset());
+//        } catch (IOException e) {
+//          e.printStackTrace();
+//        }
+      }
+    }
   }
 }
